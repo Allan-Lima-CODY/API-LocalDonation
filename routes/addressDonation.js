@@ -1,4 +1,6 @@
 import express from "express";
+import axios from "axios";
+import methods from "../generalMethods.js";
 import connection from "../connection.js";
 
 const addressDonationRoutes = express.Router();
@@ -65,26 +67,46 @@ addressDonationRoutes.get("/addressdonation", (req, res, error) => {
     });
 });
 
-addressDonationRoutes.post("/addressdonation", (req, res, error) => {
+addressDonationRoutes.post("/addressdonation", async (req, res, error) => {
+    const DonationsInstitutionsID = req.body;
 
-    const sql = 'INSERT INTO donationsaddress(DonationsInstitutionsID, CEP, State, City, Province, PublicPlace, Number, Complementary) VALUES (?, ?, ?, ?, ?, ?, ?, ?)';
-    const { DonationsInstitutionsID, CEP, State, City, Province, PublicPlace, Number, Complementary } = req.body;
+    if (methods.VerifyIfHadAddress(res, DonationsInstitutionsID)) {
+        const { CEP, Number, Complementary } = req.body;
 
-    connection.query(sql, [DonationsInstitutionsID, CEP, State, City, Province, PublicPlace, Number, Complementary], (error, results) => {
-        if (results.affectedRows > 0) {
-            if (!error) {
-                res.status(200).json({ msg: "Register successfully!" });
-            } else {
-                res.status(500).json({ msg: "Error registering data from the database." });
-            }
-        } else {
-            res.status(500).json({ msg: "A error ocurred!", error });
+        try {
+            const response = await axios.get(`https://viacep.com.br/ws/${CEP}/json/`);
+            const { localidade, uf, bairro, logradouro } = response.data;
+
+            console.log(response.data);
+
+            const sql = 'INSERT INTO donationsaddress(DonationsInstitutionsID, CEP, State, City, Province, PublicPlace, Number, Complementary) VALUES (?, ?, ?, ?, ?, ?, ?, ?)';
+            const values = [DonationsInstitutionsID, CEP, Number, Complementary, localidade, uf, bairro, logradouro];
+
+            connection.query(sql, values, (error, results) => {
+                if (results.affectedRows > 0) {
+                    if (!error) {
+                        res.status(200).json({ msg: "Register successfully!" });
+                    } else {
+                        res.status(500).json({ msg: "Error registering data from the database." });
+                    }
+                } else {
+                    res.status(500).json({ msg: "A error ocurred!", error });
+                }
+            });
+        } catch (error) {
+            res.status(400).json({ error: 'Invalid CEP!' });
         }
-    });
+    }
 });
 
-addressDonationRoutes.put("/addressdonation", (req, res, error) => {
-    let sql = "UPDATE donationsaddress SET DonationsInstitutionsID = ?, " +
+addressDonationRoutes.put("/addressdonation", async (req, res, error) => {
+    const { CEP, Number, Complementary, DonationsInstitutionsID } = req.body;
+
+    try {
+        const response = await axios.get(`https://viacep.com.br/ws/${CEP}/json/`);
+        const { localidade, uf, bairro, logradouro } = response.data;
+
+        let sql = "UPDATE donationsaddress SET DonationsInstitutionsID = ?, " +
         "CEP = ?, " +
         "State = ?, " +
         "City = ?, " +
@@ -94,19 +116,23 @@ addressDonationRoutes.put("/addressdonation", (req, res, error) => {
         "Complementary = ? " +
         "WHERE DonationsAddressID = ?";
 
-    const { DonationsInstitutionsID, CEP, State, City, Province, PublicPlace, Number, Complementary, DonationsAddressID } = req.body;
+        const values = [CEP, uf, localidade, bairro, logradouro, Number, Complementary, DonationsInstitutionsID];
 
-    connection.query(sql, [DonationsInstitutionsID, CEP, State, City, Province, PublicPlace, Number, Complementary, DonationsAddressID], (error, results) => {
-        if (results.affectedRows > 0) {
-            if (!error) {
-                res.status(200).json({ msg: "Data updated successfully!" });
+        connection.query(sql, values, (error, results) => {
+            console.log(sql);
+            if (results.affectedRows > 0) {
+                if (!error) {
+                    res.status(200).json({ msg: "Data updated successfully!" });
+                } else {
+                    res.status(500).json({ msg: "Error updating data from the database." });
+                }
             } else {
-                res.status(500).json({ msg: "Error updating data from the database." });
+                res.status(404).json({ msg: "Data not found!" });
             }
-        } else {
-            res.status(404).json({ msg: "Data not found!" });
-        }
-    });
+        });
+    } catch (error) {
+        res.status(400).json({ msg: "Invalid CEP!" });
+    }
 });
 
 addressDonationRoutes.delete("/addressdonation", (req, res, error) => {
