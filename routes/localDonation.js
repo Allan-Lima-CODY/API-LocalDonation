@@ -3,13 +3,41 @@ import connection from "../connection.js";
 
 const localDonationRoutes = express.Router();
 
+localDonationRoutes.get("/getlocaldonation/id:", (req, res, error) => {
+    let objLocalDonation;
+
+    const sql = "SELECT CONCAT(DI.DonationsInstitutionsID, \" - \", DI.Name, \", \", DI.CNPJ, \", (\", DI.Contact, \") - \", DI.Email) AS Institution " +
+        "CONCAT(DA.PublicPlace, \", \", DA.Province, \", \", DA.Number, \", \", DA.City, \" - \", DA.State, \", \", DA.Complementary, \", CEP: \", DA.CEP) AS Adress " +
+        "FROM donationsinstitutions DI " +
+        "LEFT JOIN donationsaddress DA ON (DI.DonationsInstitutionsID = DA.DonationsInstitutionsID) " +
+        "WHERE DI.DonationsInstitutionsID = " + req.params.id;
+
+    connection.query(sql, (error, results) => {
+        if (results.length > 0) {
+            if (!error) {
+                res.status(200).json({ msg: "Data returned with success!", localDonation: results });
+
+                objLocalDonation = results[0];
+            } else {
+                res.status(404).json({ msg: error });
+            }
+        } else {
+            res.status(404).json({ msg: "Data not found!" });
+        }
+    });
+
+    return objLocalDonation;
+});
+
 localDonationRoutes.get("/listlocaldonation", (req, res, error) => {
-    const sql = "SELECT DonationsInstitutionsID, " +
-        "Name, " +
-        "CNPJ, " +
-        "Contact, " +
-        "Email " +
-        "FROM donationsinstitutions DI";
+    const sql = "SELECT DI.DonationsInstitutionsID, " +
+        "DI.Name, " +
+        "DI.CNPJ, " +
+        "DI.Contact, " +
+        "DI.Email, " +
+        "DA.* "
+        "FROM donationsinstitutions DI " +
+        "LEFT JOIN donationsaddress DA ON (DI.DonationsInstitutionsID = DA.DonationsInstitutionsID)";
 
     connection.query(sql, (error, results) => {
         if (results.length > 0) {
