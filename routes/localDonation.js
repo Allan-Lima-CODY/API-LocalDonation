@@ -3,10 +3,9 @@ import connection from "../connection.js";
 
 const localDonationRoutes = express.Router();
 
-localDonationRoutes.get("/getlocaldonation/id:", (req, res, error) => {
-    let objLocalDonation;
+localDonationRoutes.get("/getlocaldonation/:id", (req, res, error) => {
 
-    const sql = "SELECT CONCAT(DI.DonationsInstitutionsID, \" - \", DI.Name, \", \", DI.CNPJ, \", (\", DI.Contact, \") - \", DI.Email) AS Institution " +
+    const sql = "SELECT CONCAT(DI.DonationsInstitutionsID, \" - \", DI.Name, \", \", DI.CNPJ, \", (\", DI.Contact, \") - \", DI.Email) AS Institution, " +
         "CONCAT(DA.PublicPlace, \", \", DA.Province, \", \", DA.Number, \", \", DA.City, \" - \", DA.State, \", \", DA.Complementary, \", CEP: \", DA.CEP) AS Adress " +
         "FROM donationsinstitutions DI " +
         "LEFT JOIN donationsaddress DA ON (DI.DonationsInstitutionsID = DA.DonationsInstitutionsID) " +
@@ -15,9 +14,7 @@ localDonationRoutes.get("/getlocaldonation/id:", (req, res, error) => {
     connection.query(sql, (error, results) => {
         if (results.length > 0) {
             if (!error) {
-                res.status(200).json({ msg: "Data returned with success!", localDonation: results });
-
-                objLocalDonation = results[0];
+                res.status(200).json(results[0]);
             } else {
                 res.status(404).json({ msg: error });
             }
@@ -25,8 +22,6 @@ localDonationRoutes.get("/getlocaldonation/id:", (req, res, error) => {
             res.status(404).json({ msg: "Data not found!" });
         }
     });
-
-    return objLocalDonation;
 });
 
 localDonationRoutes.get("/listlocaldonation", (req, res, error) => {
@@ -35,7 +30,7 @@ localDonationRoutes.get("/listlocaldonation", (req, res, error) => {
         "DI.CNPJ, " +
         "DI.Contact, " +
         "DI.Email, " +
-        "DA.* "
+        "DA.* " +
         "FROM donationsinstitutions DI " +
         "LEFT JOIN donationsaddress DA ON (DI.DonationsInstitutionsID = DA.DonationsInstitutionsID)";
 
@@ -118,32 +113,6 @@ localDonationRoutes.put("/localdonation", (req, res, error) => {
                 res.status(200).json({ msg: "Data updated successfully!" });
             } else {
                 res.status(500).json({ msg: "Error updating data from the database." });
-            }
-        } else {
-            res.status(404).json({ msg: "Data not found!" });
-        }
-    });
-});
-
-localDonationRoutes.delete("/localdonation", (req, res, error) => {
-    let sql = 'DELETE FROM donationsinstitutions WHERE ';
-    const { Column, Value } = req.body;
-    let params = [];
-
-    if (typeof Value === 'string') {
-        sql += `${Column} LIKE ?`;
-        params.push(`%${Value}%`);
-    } else {
-        sql += `${Column} = ?`;
-        params.push(Value);
-    }
-
-    connection.query(sql, params, (error, results) => {
-        if (results.affectedRows > 0) {
-            if (!error) {
-                res.status(200).json({ msg: "Data deleted successfully!" });
-            } else {
-                res.status(500).json({ msg: "Error deleting data from the database." });
             }
         } else {
             res.status(404).json({ msg: "Data not found!" });

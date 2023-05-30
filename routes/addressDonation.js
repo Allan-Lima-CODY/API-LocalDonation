@@ -67,10 +67,12 @@ addressDonationRoutes.get("/addressdonation", (req, res, error) => {
     });
 });
 
-addressDonationRoutes.post("/addressdonation", async (req, res, error) => {
-    const DonationsInstitutionsID = req.body;
+addressDonationRoutes.post("/addressdonation/:id", async (req, res, error) => {
+    const DonationsInstitutionsID = req.params.id;
 
-    if (methods.VerifyIfHadAddress(res, DonationsInstitutionsID)) {
+    const hasAddress = await methods.VerifyIfHadAddress(res, DonationsInstitutionsID);
+
+    if (!hasAddress) {
         const { CEP, Number, Complementary } = req.body;
 
         try {
@@ -133,32 +135,6 @@ addressDonationRoutes.put("/addressdonation", async (req, res, error) => {
     } catch (error) {
         res.status(400).json({ msg: "Invalid CEP!" });
     }
-});
-
-addressDonationRoutes.delete("/addressdonation", (req, res, error) => {
-    let sql = 'DELETE FROM donationsaddress WHERE ';
-    const { Column, Value } = req.body;
-    let params = [];
-
-    if (typeof Value === 'string') {
-        sql += `${Column} LIKE ?`;
-        params.push(`%${Value}%`);
-    } else {
-        sql += `${Column} = ?`;
-        params.push(Value);
-    }
-
-    connection.query(sql, params, (error, results) => {
-        if (results.affectedRows > 0) {
-            if (!error) {
-                res.status(200).json({ msg: "Data deleted successfully!" });
-            } else {
-                res.status(500).json({ msg: "Error deleting data from the database." });
-            }
-        } else {
-            res.status(404).json({ msg: "Data not found!" });
-        }
-    });
 });
 
 export default addressDonationRoutes;

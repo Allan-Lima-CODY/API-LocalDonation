@@ -1,4 +1,3 @@
-import exportedLogin from "./routes/login.js";
 import connection from "./connection.js";
 
 async function VerifyIfHadAddress(res, DonationsInstitutionsID) {
